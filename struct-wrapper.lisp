@@ -23,9 +23,34 @@
 
 ;;; ---------- Aux Subroutines for s-expression node ----------
 
+(defun is-node (node)
+  (consp node))
+
+(defun get-attributes (node)
+  (when (is-node node)
+    (cadr node)))
+
+(defun get-class (node)
+  (when (is-node node)
+    (cdr (assoc "class" (get-attributes node)
+		:test #'equal))))
+
+(defun get-tag (node)
+  (when (is-node node)
+    (car node)))
+
+(defun match-selector-head (node head)
+  (cond ((eq (aref head 0) #\.) (member (subseq head 1)
+					(get-class node)
+					:test #'string-equal))
+	(t (string-equal head (get-tag node)))))
+
+      
+
 (defun get-children (node)
   "Fetch the list of children in an s-expression node."
-  (cddr node))
+  (when (is-node node)
+    (cddr node)))
 
 (defun split-selector (selector)
   "split the selector string into two parts (as values) and return
@@ -42,7 +67,7 @@
   "Cluster the slot-descriptors by the heads of the selectors
 associated with each descriptor. Descriptor with an empty-string
 selector head will be clustered as leaves."
-  (let ((clusters nil)
+  (let ((clusters (make-hash-table :test #'equal))
         (leaves nil))
     (loop for slot-descriptor in slot-descriptors
        do (multiple-value-bind (head tail) 
@@ -50,7 +75,7 @@ selector head will be clustered as leaves."
             (if (equal head "")
                 (push slot-descriptor leaves)
                 (push (cons tail (rest slot-descriptor))
-                      (getf clusters head)))))
+		      (gethash head clusters)))))
     (values clusters leaves)))
 
 ;;; ---------- Struct Wrapper Macros ----------
@@ -61,16 +86,20 @@ selector head will be clustered as leaves."
         (cluster-by-selector-head slot-descriptors)
       `(lambda (,node)
          ,@(let ((clauses 
-                  (when clusters
-                    `(loop for ,child in (get-children ,node)
-                        do ,@(loop for (head sub-descriptors) in clusters
+                  (unless (zerop (hash-table-count clusters))
+                    `((loop for ,child in (get-children ,node)
+                        do ,@(loop 
+				for head being 
+				the hash-keys of clusters
+				for sub-descriptors being 
+				the hash-values of clusters
                                 collect `(when (match-selector-head 
                                                 ,child 
                                                 ,head)
                                            (funcall ,(build-wrapper-lambda
                                                       sub-descriptors
                                                       result-name)
-                                                    ,child)))))))
+                                                    ,child))))))))
                 (when leaves
                   (loop for descriptor in leaves
                      do (push `(setf (getf ,result-name
@@ -86,12 +115,18 @@ selector head will be clustered as leaves."
     `(defun ,name (,node)
        (let ((,result '(:obj t)))
          (funcall ,(build-wrapper-lambda slot-descriptors result)
-                  ,node)))))
+                  ,node)
+	 ,result))))
 
-(defmacro test-def (&rest slot-descriptors)
-  (multiple-value-bind (a b) 
-      (cluster-by-selector-head slot-descriptors)
-    `(,a ,b)))
+(defmacro make-struct-wrapper (&rest slot-descriptors)
+  (with-gensyms (node result)
+    `(lambda (,node)
+       (let ((,result '(:obj t)))
+	 (funcall ,(build-wrapper-lambda slot-descriptors result)
+                  ,node)
+	 ,result))))
+
+
 
 
 
