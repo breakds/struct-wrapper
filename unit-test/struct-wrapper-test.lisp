@@ -1,5 +1,5 @@
 ;;;; struct-wrapper-test.lisp
-;;;; Unit tests for struct-wrapper
+;;;; Unit tests for struct-wrapper.lisp
 ;;;; Author: BreakDS <breakds@gmail.com>
 
 (in-package #:breakds.struct-wrapper-test)

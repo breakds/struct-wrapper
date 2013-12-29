@@ -3,13 +3,6 @@
 
 (in-package #:struct-wrapper)
 
-(defun node-from-uri (uri)
-  "Get the s-expression representation of the targeted webpage"
-  (html5-parser:node-to-xmls 
-   (html5-parser:parse-html5 
-    (drakma:http-request uri))))
-
-
 ;;; ---------- Aux Subroutines for slot descriptors ----------
 
 (defun get-selector (slot-descriptor)
@@ -22,22 +15,6 @@
   (caddr slot-descriptor))
 
 ;;; ---------- Aux Subroutines for s-expression node ----------
-
-(defun is-node (node)
-  (consp node))
-
-(defun get-attributes (node)
-  (when (is-node node)
-    (cadr node)))
-
-(defun get-class (node)
-  (when (is-node node)
-    (cdr (assoc "class" (get-attributes node)
-		:test #'equal))))
-
-(defun get-tag (node)
-  (when (is-node node)
-    (car node)))
 
 (defun match-selector-head (node head)
   (cond ((eq (aref head 0) #\.) (member (subseq head 1)

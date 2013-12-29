@@ -9,5 +9,7 @@
 		 #:stefil
                  #:basicl)
     :components ((:file "package")
+		 (:file "html-operation")
                  (:file "struct-wrapper")
+		 (:file "unit-test/html-operation-test")
 		 (:file "unit-test/struct-wrapper-test")))
