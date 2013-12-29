@@ -8,11 +8,18 @@
   (:export #:html-from-uri
 	   #:html-from-string
 	   #:fragment-from-string
+	   ;; node accessors
 	   #:is-trivial
 	   #:get-tag
 	   #:get-attributes
 	   #:get-class
-	   #:get-children))
+	   #:get-children
+	   ;; descriptor related
+	   #:get-selector
+	   #:get-slot-name
+	   #:get-callback
+	   #:match-pattern
+	   #:split-selector))
 
 (defpackage #:breakds.struct-wrapper
   (:nicknames #:struct-wrapper)

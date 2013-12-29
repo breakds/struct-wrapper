@@ -3,42 +3,7 @@
 
 (in-package #:struct-wrapper)
 
-;;; ---------- Aux Subroutines for slot descriptors ----------
-
-(defun get-selector (slot-descriptor)
-  (car slot-descriptor))
-
-(defun get-slot-name (slot-descriptor)
-  (cadr slot-descriptor))
-
-(defun get-callback (slot-descriptor)
-  (caddr slot-descriptor))
-
-;;; ---------- Aux Subroutines for s-expression node ----------
-
-(defun match-selector-head (node head)
-  (cond ((eq (aref head 0) #\.) (member (subseq head 1)
-					(get-class node)
-					:test #'string-equal))
-	(t (string-equal head (get-tag node)))))
-
-      
-
-(defun get-children (node)
-  "Fetch the list of children in an s-expression node."
-  (when (is-node node)
-    (cddr node)))
-
-(defun split-selector (selector)
-  "split the selector string into two parts (as values) and return
-  them, where the first one is the first selector, and the second one
-  are the rest of the selector. The second part may be nil."
-  (let* ((stripped (string-trim " " selector))
-         (i (position #\space stripped)))
-    (if i
-        (values (subseq stripped 0 i)
-                (string-trim " " (subseq stripped (1+ i))))
-        (values stripped ""))))
+;;; ---------- Aux subroutines for slot descriptors ----------
 
 (defun cluster-by-selector-head (slot-descriptors)
   "Cluster the slot-descriptors by the heads of the selectors
