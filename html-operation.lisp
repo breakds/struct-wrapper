@@ -21,6 +21,11 @@
 
 (defun html-from-string (str)
   "Convert the html text to the s-exp representation."
+  ;; one thing that is worth being noted here is that by converting a
+  ;; string into a html node, html5-parser will automatically
+  ;; normalize it. That says, if the string being parsed does not come
+  ;; with <thml> <head> etc., it will wrap them in
+  ;; <html><body></body></html>.
   (html5-parser:node-to-xmls
    (html5-parser:parse-html5 str)))
 
@@ -69,11 +74,21 @@
     (when (car result)
       result)))
 
-
 (declaim (inline get-children))
 (def-node-accessor children
-    (cddr node))    
+    (cddr node))
 
+(declaim (inline get-content))
+(def-node-accessor content
+  (let ((holder (caddr node)))
+    (if (is-trivial holder)
+	holder
+	"not-plain-text")))
+
+(declaim (inline get-content-int))
+(def-node-accessor content-int
+  (handler-case (parse-integer (get-content node))
+    (t () nil)))
 
 ;;; --- Slot descriptor operations
 

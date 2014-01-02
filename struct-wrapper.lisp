@@ -7,8 +7,8 @@
 
 (defun cluster-by-selector-head (slot-descriptors)
   "Cluster the slot-descriptors by the heads of the selectors
-associated with each descriptor. Descriptor with an empty-string
-selector head will be clustered as leaves."
+  associated with each descriptor. Descriptor with an empty-string
+  selector head will be clustered as leaves."
   (let ((clusters (make-hash-table :test #'equal))
         (leaves nil))
     (loop for slot-descriptor in slot-descriptors
@@ -35,7 +35,7 @@ selector head will be clustered as leaves."
 				the hash-keys of clusters
 				for sub-descriptors being 
 				the hash-values of clusters
-                                collect `(when (match-selector-head 
+                                collect `(when (match-pattern 
                                                 ,child 
                                                 ,head)
                                            (funcall ,(build-wrapper-lambda
@@ -50,7 +50,6 @@ selector head will be clustered as leaves."
                                               ,node))
                               clauses)))
                 clauses)))))
-
 
 (defmacro def-struct-wrapper (name &rest slot-descriptors)
   (with-gensyms (result node)
@@ -68,6 +67,28 @@ selector head will be clustered as leaves."
                   ,node)
 	 ,result))))
 
+;; (defmacro def-list-wrapper (name selector callback)
+;;   (with-gensym (result)
+;;     `(defun ,name (,node)
+;;        (let ((,result nil))
+
+(defun build-list-wrapper-lambda (selector callback result-name)
+  (with-gensyms (node child)
+    (multiple-value-bind (head tail)
+	(split-selector selector)
+      `(lambda (,node)
+	 ,(if (equal head "")
+	      `(push (funcall ,callback ,node)
+		     ,result-name)
+	      `((loop for ,child in (get-children ,node)
+		   do (when (match-pattern 
+			     ,child 
+			     ,head)
+			(funcall ,(build-list-wrapper-lambda
+				   tail
+				   callback
+				   result-name)
+				 ,child)))))))))
 
 
 

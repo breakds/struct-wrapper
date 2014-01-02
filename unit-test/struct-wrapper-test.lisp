@@ -16,14 +16,20 @@
 (deftest simple-struct-wrapper-test ()
   (let ((html (node-from-test-html "simple-struct-wrapper-test.1.html")))
     (is (equal (funcall (make-struct-wrapper 
-			 ("body div h3" :name #'caddr)
-			 ("body div ul .org" :org #'caddr)
-			 ("body div ul .class" :class #'caddr)
-			 ("body div ul .rank" :rank 
-					      (lambda (node)
-						(parse-integer (caddr node)))))
+			 ("body div h3" :name #'get-content)
+			 ("body div ul .org" :org #'get-content)
+			 ("body div ul .class" :class #'get-content)
+			 ("body div ul .superior" 
+			  :superior 
+			  (lambda (node)
+			    (if (string-equal (get-content node)
+					      "yes")
+				t nil)))
+			 ("body div ul .miracle" :miracle #'get-content)
+			 ("body div ul .rank" :rank #'get-content-int))
 			html)
-	       '(:rank 10 :org "Magi" :class "Summoner" 
+	       '(:miracle "Resurrection" :superior t :rank 10 
+		 :org "Magi" :class "Summoner" 
 		 :name "Van Senareos" :obj t)))))
 
 

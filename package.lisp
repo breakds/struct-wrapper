@@ -14,6 +14,8 @@
 	   #:get-attributes
 	   #:get-class
 	   #:get-children
+	   #:get-content
+	   #:get-content-int
 	   ;; descriptor related
 	   #:get-selector
 	   #:get-slot-name
@@ -25,7 +27,8 @@
   (:nicknames #:struct-wrapper)
   (:use #:cl
         #:ppcre
-        #:swiss-knife)
+        #:swiss-knife
+	#:html-operation)
   (:export #:match-selector-head
 	   #:def-struct-wrapper
 	   #:make-struct-wrapper))
@@ -43,6 +46,7 @@
   (:nicknames #:struct-wrapper-test)
   (:use #:cl 
 	#:stefil 
+	#:breakds.html-operation
 	#:breakds.struct-wrapper)
   (:export #:test-all))
 

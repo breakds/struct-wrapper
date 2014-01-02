@@ -39,6 +39,26 @@
   (is (equal expected 
 	     (get-children (fragment-from-string html-frag)))))
 
+(deftest (get-content-test
+	  :cases (("plain text" nil)
+		  ("<ul><li>a1</li><li>a2</li></ul>"
+		   "not-plain-text")
+		  ("<a>haha</a>" "haha")))
+    (html-frag expected)
+  (is (equal expected 
+	     (get-content (fragment-from-string html-frag)))))
+
+(deftest (get-content-int-test
+	  :cases (("plain text" nil)
+		  ("<ul><li>a1</li><li>a2</li></ul>"
+		   nil)
+		  ("<a>18</a>" 18)
+		  ("<a>18.1</a>" nil)
+		  ("<a>haha</a>" nil)))
+    (html-frag expected)
+  (is (equal expected 
+	     (get-content-int (fragment-from-string html-frag)))))
+    
 (deftest (match-pattern-test
 	  :cases (("<A href=\"uri\">link</A>" "a" 0)
 		  ("<a href=\"uri\">link</a>" "A:4" 4)
@@ -69,8 +89,4 @@
   (multiple-value-bind (head tail) (split-selector selector)
     (is (string-equal expected-tail tail))
     (is (string-equal expected-head head))))
-
-
-    
-
 
