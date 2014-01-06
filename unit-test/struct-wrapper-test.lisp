@@ -42,22 +42,22 @@
 
 (deftest simple-struct-wrapper-test ()
   (let ((html (node-from-test-html "simple-struct-wrapper-test.1.html")))
-    (is (equal (funcall (make-struct-wrapper 
-			 ("body div h3" :name #'get-content)
-			 ("body div ul .org" :org #'get-content)
-			 ("body div ul .class" :class #'get-content)
-			 ("body div ul .superior" 
-			  :superior 
-			  (lambda (node)
-			    (if (string-equal (get-content node)
-					      "yes")
-				t nil)))
-			 ("body div ul .miracle" :miracle #'get-content)
-			 ("body div ul .rank" :rank #'get-content-int))
-			html)
-	       '(:miracle "Resurrection" :superior t :rank 10 
-		 :org "Magi" :class "Summoner" 
-		 :name "Van Senareos" :obj t)))))
+    (is (struct-equal (funcall (make-struct-wrapper 
+                                ("body div h3" :name #'get-content)
+                                ("body div ul .org" :org #'get-content)
+                                ("body div ul .class" :class #'get-content)
+                                ("body div ul .superior" 
+                                 :superior 
+                                 (lambda (node)
+                                   (if (string-equal (get-content node)
+                                                     "yes")
+                                       t nil)))
+                                ("body div ul .miracle" :miracle #'get-content)
+                                ("body div ul .rank" :rank #'get-content-int))
+                               html)
+                      '(:miracle "Resurrection" :superior t :rank 10 
+                        :org "Magi" :class "Summoner" 
+                        :name "Van Senareos" :obj t)))))
 
 (deftest (simple-list-wrapper-test 
           :cases (("simple-list-wrapper-test.1.html"
@@ -70,24 +70,12 @@
                             html)
                    expected))))
 
-;; (deftest composite-test ()
-;;   (let ((html (node-from-test-html "composite-test.html"))
-;;         (wrapper (make-list-wrapper 
-;;                   "body .hero"
-;;                   (make-struct-wrapper
-;;                    ("p .name" :name #'get-content)))))
-;;     (let ((result (funcall wrapper html)))
-;;       (is (struct-equal result
-;;                         '((:obj t :name "Ivor")
-;;                           (:obj t :name "Jenova") 
-;;                           (:obj t :name "Kyrre")))))))
-
 (deftest composite-test ()
   (let ((html (node-from-test-html "composite-test.html"))
         (wrapper (make-list-wrapper 
                   "body .hero"
                   (make-struct-wrapper
-                   ("p .name" :name #'get-content)
+                   ("p b:1" :name #'get-content)
                    ("ul" :army (make-list-wrapper
                                 "li"
                                 (make-struct-wrapper
@@ -113,6 +101,47 @@
                                         :class "Pegasus"
                                         :num 30)))
                           (:obj t :name "Kyrre" :army nil)))))))
+
+;;; ---------- Tests for def versions ----------
+
+(def-struct-wrapper army-unit-wrapper
+  (".creature" :class #'get-content)
+  (".quantity" :num #'get-content-int))
+
+(def-list-wrapper army-wrapper
+    "li" #'army-unit-wrapper)
+
+(def-struct-wrapper hero-wrapper
+  ("p b:1" :name #'get-content)
+  ("ul" :army #'army-wrapper))
+
+(def-list-wrapper heroes-wrapper
+    "body .hero" #'hero-wrapper)
+
+(deftest def-wrapper-composite-test ()
+  (let ((html (node-from-test-html "composite-test.html")))
+    (is (struct-equal (heroes-wrapper html)
+                      '((:obj t :name "Ivor" 
+                         :army ((:obj t 
+                                      :class "Centaur Captain"
+                                      :num 100)
+                                (:obj t
+                                      :class "Grand Elf"
+                                      :num 45)
+                                (:obj t
+                                      :class "Grand Elf"
+                                      :num 150)))
+                        (:obj t :name "Jenova" 
+                         :army ((:obj t
+                                      :class "War Unicorn"
+                                      :num 5)
+                                (:obj t
+                                      :class "Pegasus"
+                                      :num 30)))
+                        (:obj t :name "Kyrre" :army nil))))))
+
+
+
         
     
                    

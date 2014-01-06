@@ -67,24 +67,28 @@
 ;;; ---------- Struct Wrapper Macros ----------
 
 (defun build-wrapper-body (slot-descriptors node result-name)
-  (with-gensyms (child)
+  (with-gensyms (child matcher)
     (multiple-value-bind (clusters leaves)
         (cluster-by-selector-head slot-descriptors)
       (let ((clauses 
              (unless (zerop (hash-table-count clusters))
-               `((loop for ,child in (get-children ,node)
-                    do ,@(loop 
-                            for head being 
-                            the hash-keys of clusters
-                            for sub-descriptors being 
-                            the hash-values of clusters
-                            collect `(when (match-pattern 
-                                            ,child 
-                                            ,head)
-                                       ,@(build-wrapper-body
-                                          sub-descriptors
-                                          child
-                                          result-name))))))))
+               `((let ,(loop 
+                          for head being the hash-keys of clusters
+                          for id from 0
+                          collect `(,(symb matcher "-" id) 
+                                     (make-pattern-matcher ,head)))
+                   (loop for ,child in (get-children ,node)
+                      do ,@(loop 
+                              for sub-descriptors being 
+                              the hash-values of clusters
+                              for id from 0
+                              collect `(when (funcall 
+                                              ,(symb matcher "-" id)
+                                              ,child)
+                                         ,@(build-wrapper-body
+                                            sub-descriptors
+                                            child
+                                            result-name)))))))))
         (when leaves
           (loop for descriptor in leaves
              do (push `(setf (getf ,result-name
@@ -104,14 +108,15 @@
                                result)
 	 ,result))))
 
-(defmacro def-struct-wrapper (name &rest slot-descriptors)
+(defmacro def-struct-wrapper (name &body slot-descriptors)
   (with-gensyms (result node)
     `(defun ,name (,node)
        (let ((,result '(:obj t)))
          ,@(build-wrapper-body (mapcar #'pre-expand-descriptor
                                        slot-descriptors)
                                node
-                               result)))))
+                               result)
+         ,result))))
 
 (defmacro make-struct-wrapper (&rest slot-descriptors)
   (build-wrapper-lambda slot-descriptors))
@@ -135,21 +140,20 @@
         (pre-expand-callback (caddr descriptor))))
 
 (defun build-list-wrapper-body (selector callback node result-name)
-  (with-gensyms (child)
+  (with-gensyms (child matcher)
     (multiple-value-bind (head tail)
 	(split-selector selector)
       (if (equal head "")
           `(push (funcall ,callback ,node)
                  ,result-name)
-          `(loop for ,child in (get-children ,node)
-              do (when (match-pattern 
-                        ,child 
-                        ,head)
-                   ,(build-list-wrapper-body
-                     tail
-                     callback
-                     child
-                     result-name)))))))
+          `(let ((,matcher (make-pattern-matcher ,head)))
+             (loop for ,child in (get-children ,node)
+                do (when (funcall ,matcher ,child)
+                     ,(build-list-wrapper-body
+                       tail
+                       callback
+                       child
+                       result-name))))))))
 
 (defun build-list-wrapper-lambda (selector callback)
   (with-gensyms (result node)

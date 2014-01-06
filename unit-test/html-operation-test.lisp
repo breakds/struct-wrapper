@@ -59,25 +59,30 @@
   (is (equal expected 
 	     (get-content-int (fragment-from-string html-frag)))))
     
-(deftest (match-pattern-test
-	  :cases (("<A href=\"uri\">link</A>" "a" 0)
-		  ("<a href=\"uri\">link</a>" "A:4" 4)
-		  ("<a href=\"uri\" class=\"funny tasty\">link</a>"
-		   ".funny" 0)))
-    (html-frag head n-th)
-  (is (not (null (match-pattern (fragment-from-string html-frag)
-				head
-				n-th)))))
+(deftest make-pattern-matcher-test ()
+  (let ((matcher (make-pattern-matcher "a"))
+        (node (fragment-from-string
+               "<A href=\"uri\">link</a>")))
+    (is (not (null (funcall matcher node)))))
+  
+  (let ((matcher (make-pattern-matcher "A:4"))
+        (node (fragment-from-string
+               "<A href=\"uri\">link</a>")))
+    (is (null (funcall matcher node)))
+    (is (null (funcall matcher node)))
+    (is (null (funcall matcher node)))
+    (is (not (null (funcall matcher node))))
+    (is (null (funcall matcher node))))
 
-(deftest (inverse-match-pattern-test
-	  :cases (("<a href=\"uri\">link</a>" "b" 0)
-		  ("<a href=\"uri\">link</a>" "a:3" 4)
-		  ("<a href=\"uri\" class=\"funny tasty\">link</a>"
-		   ".not-funny" 0)))
-    (html-frag head n-th)
-  (is (null (match-pattern (fragment-from-string html-frag)
-			   head
-			   n-th))))
+  (let ((matcher (make-pattern-matcher ".funny"))
+        (node (fragment-from-string
+               "<a href=\"uri\" class=\"funny tasty\">link</a>")))
+    (is (not (null (funcall matcher node)))))
+
+  (let ((matcher (make-pattern-matcher ".not-funny"))
+        (node (fragment-from-string
+               "<a href=\"uri\" class=\"funny tasty\">link</a>")))
+    (is (null (funcall matcher node)))))
 
 (deftest (split-selector-test
 	  :cases ((" a  ul .strong:4 v:1  "

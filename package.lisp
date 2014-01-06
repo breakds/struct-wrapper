@@ -20,7 +20,7 @@
 	   #:get-selector
 	   #:get-slot-name
 	   #:get-callback
-	   #:match-pattern
+           #:make-pattern-matcher
 	   #:split-selector))
 
 (defpackage #:breakds.struct-wrapper

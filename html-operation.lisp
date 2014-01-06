@@ -114,18 +114,53 @@
 		(parse-integer (cadr splitted))
 	      (t nil)))))
 
-(defun match-pattern (node head &optional (n-th 0))
-  "Return T if the node matches the selector head."
-  ;; selectors is usually a list of selector patterns, and head is the
-  ;; first one. Currently supported patterns are: "tag-name"
-  ;; ".class-name" and "[tag-name|.class-name]:n", where n stands for
-  ;; we want the n-th match.
+;; (declaim (inline match-pattern))
+;; (defun match--pattern (node head)
+;;   "Return T if the node matches the selector head (major with no
+;;   postfix)."
+;;   (cond ((eq (aref major 0) #\.) (member (subseq major 1)
+;;                                          (get-class node)
+;;                                          :test #'string-equal))
+;;         (t (string-equal major (get-tag node)))
+
+(declaim (inline match-class-pattern))
+(defun match-class-pattern (node pattern)
+  "Return T if the class attribute of the node contains the provided
+  pattern."
+  (member (subseq pattern 1) (get-class node) :test #'string-equal))
+
+(declaim (inline match-tag-pattern))
+(defun match-tag-pattern (node pattern)
+  "Return T if the tag of the node contains the provided pattern."
+  (string-equal pattern (get-tag node)))
+
+
+(defun make-pattern-matcher (head)
+  "Create a lambda that accepts a node. If the node matches the
+  provided selector head, the lambda will return T." 
+  ;; Currently supported patterns are: "tag-name" ".class-name" and
+  ;; "[tag-name|.class-name]:n", where n stands for we want the n-th
+  ;; match.
   (multiple-value-bind (major postfix) (analyze-pattern head)
-    (when (or (null postfix) (= postfix n-th))
-      (cond ((eq (aref major 0) #\.) (member (subseq major 1)
-					     (get-class node)
-					     :test #'string-equal))
-	    (t (string-equal major (get-tag node)))))))
+    (let ((is-class-pattern (eq (aref major 0) #\.)))
+      (if (null postfix)
+        (if is-class-pattern
+            (lambda (node)
+              (match-class-pattern node major))
+            (lambda (node)
+              (match-tag-pattern node major)))
+        (if is-class-pattern
+            (let ((counter 0))
+              (lambda (node)
+                (when (match-class-pattern node major)
+                  (incf counter))
+                (= counter postfix)))
+            (let ((counter 0))
+              (lambda (node)
+                (when (< counter postfix)
+                  (when (match-tag-pattern node major)
+                    (incf counter))
+                  (= counter postfix)))))))))
 
 (defun split-selector (selector)
   "split the selector string into two parts (as values) and return
