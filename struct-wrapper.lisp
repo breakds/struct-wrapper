@@ -3,6 +3,50 @@
 
 (in-package #:struct-wrapper)
 
+;;; ---------- Aux subroutines for p-list struct representation ----------
+;;; The p-list struct representation is demonstrated below:
+;;; '(:slot-name-1 ...
+;;;   :slot-name-2 ...
+;;;   ....
+;;;   :obj t)
+;;; the list will be treated as a struct iff :obj is presented and set to true.
+(defun set-equal (list-a list-b &key (test #'equal))
+  "Return t if list-a and list-b has exactly the same
+  arguments (Equality test for unordred list)."
+  (null (if (> (length list-a) (length list-b)) 
+            (set-difference list-a
+                            list-b
+                            :test test)
+            (set-difference list-b
+                            list-a
+                            :test test))))
+
+(defun struct-equal (obj-a obj-b)
+  "Equality test for obj-a and obj-b. If both are structs, return t
+  when every slot of them are struct-equal. If both are lists, return
+  t when they are set-equal on struct-equal. If both are
+  elements (string, integer etc.), return t when they are
+  equal. Return nil otherwise."
+  (labels ((try-identify-struct (obj)
+             (handler-case (getf obj :obj)
+               (t () nil))))
+    (if (and (consp obj-a)
+             (consp obj-b))
+        (cond ((and (try-identify-struct obj-a)
+                    (try-identify-struct obj-b))
+               ;; check whether obj-a and obj-b disagree on at
+               ;; least one of obj-a's keys
+               (unless (loop for key in obj-a by #'cddr
+                          when (not (struct-equal (getf obj-a key)
+                                                  (getf obj-b key)))
+                          return t)
+                 t))
+              (t (set-equal obj-a obj-b :test #'struct-equal)))
+        (when (and (atom obj-a) (atom obj-b))
+          (equal obj-a obj-b)))))
+
+
+
 ;;; ---------- Aux subroutines for slot descriptors ----------
 
 (defun cluster-by-selector-head (slot-descriptors)
@@ -22,73 +66,120 @@
 
 ;;; ---------- Struct Wrapper Macros ----------
 
-(defun build-wrapper-lambda (slot-descriptors result-name)
-  (with-gensyms (node child)
+(defun build-wrapper-body (slot-descriptors node result-name)
+  (with-gensyms (child)
     (multiple-value-bind (clusters leaves)
         (cluster-by-selector-head slot-descriptors)
-      `(lambda (,node)
-         ,@(let ((clauses 
-                  (unless (zerop (hash-table-count clusters))
-                    `((loop for ,child in (get-children ,node)
-                        do ,@(loop 
-				for head being 
-				the hash-keys of clusters
-				for sub-descriptors being 
-				the hash-values of clusters
-                                collect `(when (match-pattern 
-                                                ,child 
-                                                ,head)
-                                           (funcall ,(build-wrapper-lambda
-                                                      sub-descriptors
-                                                      result-name)
-                                                    ,child))))))))
-                (when leaves
-                  (loop for descriptor in leaves
-                     do (push `(setf (getf ,result-name
-                                           ,(get-slot-name descriptor))
-                                     (funcall ,(get-callback descriptor)
-                                              ,node))
-                              clauses)))
-                clauses)))))
+      (let ((clauses 
+             (unless (zerop (hash-table-count clusters))
+               `((loop for ,child in (get-children ,node)
+                    do ,@(loop 
+                            for head being 
+                            the hash-keys of clusters
+                            for sub-descriptors being 
+                            the hash-values of clusters
+                            collect `(when (match-pattern 
+                                            ,child 
+                                            ,head)
+                                       ,@(build-wrapper-body
+                                          sub-descriptors
+                                          child
+                                          result-name))))))))
+        (when leaves
+          (loop for descriptor in leaves
+             do (push `(setf (getf ,result-name
+                                   ,(get-slot-name descriptor))
+                             (funcall ,(get-callback descriptor)
+                                      ,node))
+                      clauses)))
+        clauses))))
+
+(defun build-wrapper-lambda (slot-descriptors)
+  (with-gensyms (node result)
+    `(lambda (,node)
+       (let ((,result '(:obj t)))
+         ,@(build-wrapper-body (mapcar #'pre-expand-descriptor
+                                       slot-descriptors)
+                               node
+                               result)
+	 ,result))))
 
 (defmacro def-struct-wrapper (name &rest slot-descriptors)
   (with-gensyms (result node)
     `(defun ,name (,node)
        (let ((,result '(:obj t)))
-         (funcall ,(build-wrapper-lambda slot-descriptors result)
-                  ,node)
-	 ,result))))
+         ,@(build-wrapper-body (mapcar #'pre-expand-descriptor
+                                       slot-descriptors)
+                               node
+                               result)))))
 
 (defmacro make-struct-wrapper (&rest slot-descriptors)
-  (with-gensyms (node result)
-    `(lambda (,node)
-       (let ((,result '(:obj t)))
-	 (funcall ,(build-wrapper-lambda slot-descriptors result)
-                  ,node)
-	 ,result))))
+  (build-wrapper-lambda slot-descriptors))
 
-;; (defmacro def-list-wrapper (name selector callback)
-;;   (with-gensym (result)
-;;     `(defun ,name (,node)
-;;        (let ((,result nil))
 
-(defun build-list-wrapper-lambda (selector callback result-name)
-  (with-gensyms (node child)
+(defun pre-expand-callback (callback-clause)
+  "Expand callback-clauses to be lambda clauses if they represent a
+  call to macro make-struct-wrapper or make-list-wrapper."
+  (if (consp callback-clause)
+      (cond ((eq (car callback-clause) 'make-struct-wrapper)
+             (build-wrapper-lambda (cdr callback-clause)))
+            ((eq (car callback-clause) 'make-list-wrapper)
+             (apply #'build-list-wrapper-lambda (cdr callback-clause)))
+            (t callback-clause))
+      callback-clause))
+
+(defun pre-expand-descriptor (descriptor)
+  "(Maybe) expand the callback part of the descriptor."
+  (list (car descriptor)
+        (cadr descriptor)
+        (pre-expand-callback (caddr descriptor))))
+
+(defun build-list-wrapper-body (selector callback node result-name)
+  (with-gensyms (child)
     (multiple-value-bind (head tail)
 	(split-selector selector)
-      `(lambda (,node)
-	 ,(if (equal head "")
-	      `(push (funcall ,callback ,node)
-		     ,result-name)
-	      `((loop for ,child in (get-children ,node)
-		   do (when (match-pattern 
-			     ,child 
-			     ,head)
-			(funcall ,(build-list-wrapper-lambda
-				   tail
-				   callback
-				   result-name)
-				 ,child)))))))))
+      (if (equal head "")
+          `(push (funcall ,callback ,node)
+                 ,result-name)
+          `(loop for ,child in (get-children ,node)
+              do (when (match-pattern 
+                        ,child 
+                        ,head)
+                   ,(build-list-wrapper-body
+                     tail
+                     callback
+                     child
+                     result-name)))))))
+
+(defun build-list-wrapper-lambda (selector callback)
+  (with-gensyms (result node)
+    `(lambda (,node)
+       (let ((,result nil))
+         ,(build-list-wrapper-body selector 
+                                   (pre-expand-callback callback)
+                                   node result)
+         ,result))))
+
+(defmacro def-list-wrapper (name selector callback)
+  (with-gensyms (result node)
+    `(defun ,name (,node)
+       (let ((,result nil))
+         ,(build-list-wrapper-body selector 
+                                   (pre-expand-callback callback) 
+                                   node result)
+         ,result))))
+
+(defmacro make-list-wrapper (selector callback)
+  (build-list-wrapper-lambda selector callback))
+
+
+
+
+
+
+
+
+
 
 
 

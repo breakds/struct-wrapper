@@ -29,9 +29,13 @@
         #:ppcre
         #:swiss-knife
 	#:html-operation)
-  (:export #:match-selector-head
+  (:export #:set-equal
+           #:struct-equal
+           #:match-selector-head
 	   #:def-struct-wrapper
-	   #:make-struct-wrapper))
+	   #:make-struct-wrapper
+           #:def-list-wrapper
+           #:make-list-wrapper))
 
 ;;; --- Unit Test Package
 

@@ -87,8 +87,10 @@
 
 (declaim (inline get-content-int))
 (def-node-accessor content-int
-  (handler-case (parse-integer (get-content node))
-    (t () nil)))
+  (let ((content (get-content node)))
+    (when (stringp content)
+      (handler-case (parse-integer content)
+        (t () nil)))))
 
 ;;; --- Slot descriptor operations
 
