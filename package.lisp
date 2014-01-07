@@ -13,6 +13,7 @@
 	   #:get-tag
 	   #:get-attributes
 	   #:get-class
+           #:get-id
 	   #:get-children
 	   #:get-content
 	   #:get-content-int

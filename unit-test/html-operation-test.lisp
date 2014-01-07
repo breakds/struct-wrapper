@@ -30,6 +30,15 @@
   (is (equal expected 
 	     (get-class (fragment-from-string html-frag)))))
 
+(deftest (get-id-test
+	  :cases (("<a href=\"uri\">link</a>" nil)
+		  ("<a href=\"uri\" id=\"open\">link</a>" 
+		   "open")
+		  ("plain text" nil)))
+    (html-frag expected)
+  (is (equal expected 
+             (get-id (fragment-from-string html-frag)))))
+
 (deftest (get-children-test
 	  :cases (("plain text" nil)
 		  ("<ul><li>a1</li><li>a2</li></ul>"
@@ -78,6 +87,13 @@
         (node (fragment-from-string
                "<a href=\"uri\" class=\"funny tasty\">link</a>")))
     (is (not (null (funcall matcher node)))))
+
+  (let ((matcher (make-pattern-matcher "#fun:2"))
+        (node (fragment-from-string
+               "<a href=\"uri\" id=\"fun\">link</a>")))
+    (is (null (funcall matcher node)))
+    (is (not (null (funcall matcher node))))
+    (is (null (funcall matcher node))))
 
   (let ((matcher (make-pattern-matcher ".not-funny"))
         (node (fragment-from-string

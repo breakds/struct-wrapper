@@ -59,24 +59,33 @@
 
 (declaim (inline get-tag))
 (def-node-accessor tag 
-    (car node))
+  (car node))
 
 (declaim (inline get-attributes))
 (def-node-accessor attributes
-    (cadr node))
+  (cadr node))
 
 (declaim (inline get-class))
 (def-node-accessor class
   (let ((result (split-sequence #\space 
 				(cadr (assoc "class" 
 					     (get-attributes node)
-					     :test #'equal)))))
+					     :test #'string-equal)))))
     (when (car result)
       result)))
 
+(declaim (inline get-id))
+(def-node-accessor id
+  (let ((result (cadr (assoc "id"
+                             (get-attributes node)
+                             :test #'string-equal))))
+    (when result
+      result)))
+
+
 (declaim (inline get-children))
 (def-node-accessor children
-    (cddr node))
+  (cddr node))
 
 (declaim (inline get-content))
 (def-node-accessor content
@@ -91,6 +100,9 @@
     (when (stringp content)
       (handler-case (parse-integer content)
         (t () nil)))))
+
+
+
 
 ;;; --- Slot descriptor operations
 
@@ -108,20 +120,14 @@
 
 (declaim (inline analyze-pattern))
 (defun analyze-pattern (pattern)
+  "Split the pattern into two parts: 1. the part before the colon is
+  called the major, and the part after the colon (if colon exists) is
+  called the postfix, which should be an integer."
   (let ((splitted (split-sequence #\: pattern)))
     (values (car splitted)
 	    (handler-case 
 		(parse-integer (cadr splitted))
 	      (t nil)))))
-
-;; (declaim (inline match-pattern))
-;; (defun match--pattern (node head)
-;;   "Return T if the node matches the selector head (major with no
-;;   postfix)."
-;;   (cond ((eq (aref major 0) #\.) (member (subseq major 1)
-;;                                          (get-class node)
-;;                                          :test #'string-equal))
-;;         (t (string-equal major (get-tag node)))
 
 (declaim (inline match-class-pattern))
 (defun match-class-pattern (node pattern)
@@ -134,6 +140,10 @@
   "Return T if the tag of the node contains the provided pattern."
   (string-equal pattern (get-tag node)))
 
+(declaim (inline match-id-pattern))
+(defun match-id-pattern (node pattern)
+  "Return T if the id of the node matches the pattern."
+  (string-equal (subseq pattern 1) (get-id node)))
 
 (defun make-pattern-matcher (head)
   "Create a lambda that accepts a node. If the node matches the
@@ -142,25 +152,37 @@
   ;; "[tag-name|.class-name]:n", where n stands for we want the n-th
   ;; match.
   (multiple-value-bind (major postfix) (analyze-pattern head)
-    (let ((is-class-pattern (eq (aref major 0) #\.)))
+    (let ((is-class-pattern (eq (aref major 0) #\.))
+          (is-id-pattern (eq (aref major 0) #\#)))
       (if (null postfix)
-        (if is-class-pattern
-            (lambda (node)
-              (match-class-pattern node major))
-            (lambda (node)
-              (match-tag-pattern node major)))
-        (if is-class-pattern
-            (let ((counter 0))
-              (lambda (node)
-                (when (match-class-pattern node major)
-                  (incf counter))
-                (= counter postfix)))
-            (let ((counter 0))
-              (lambda (node)
-                (when (< counter postfix)
-                  (when (match-tag-pattern node major)
-                    (incf counter))
-                  (= counter postfix)))))))))
+          (cond (is-class-pattern 
+                 (lambda (node)
+                   (match-class-pattern node major)))
+                (is-id-pattern
+                 (lambda (node)
+                   (match-id-pattern node major)))
+                (t (lambda (node)
+                     (match-tag-pattern node major))))
+          (cond (is-class-pattern
+                 (let ((counter 0))
+                   (lambda (node)
+                     (when (< counter postfix)
+                       (when (match-class-pattern node major)
+                         (incf counter))
+                       (= counter postfix)))))
+                (is-id-pattern
+                 (let ((counter 0))
+                   (lambda (node)
+                     (when (< counter postfix)
+                       (when (match-id-pattern node major)
+                         (incf counter))
+                       (= counter postfix)))))
+                (t (let ((counter 0))
+                     (lambda (node)
+                       (when (< counter postfix)
+                         (when (match-tag-pattern node major)
+                           (incf counter))
+                         (= counter postfix))))))))))
 
 (defun split-selector (selector)
   "split the selector string into two parts (as values) and return
@@ -175,6 +197,6 @@
 
 
 
-    
 
-  
+
+

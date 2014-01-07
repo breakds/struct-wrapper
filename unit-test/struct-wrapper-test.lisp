@@ -73,7 +73,7 @@
 (deftest composite-test ()
   (let ((html (node-from-test-html "composite-test.html"))
         (wrapper (make-list-wrapper 
-                  "body .hero"
+                  "body #content .hero"
                   (make-struct-wrapper
                    ("p b:1" :name #'get-content)
                    ("ul" :army (make-list-wrapper
@@ -116,7 +116,7 @@
   ("ul" :army #'army-wrapper))
 
 (def-list-wrapper heroes-wrapper
-    "body .hero" #'hero-wrapper)
+    "body #content .hero" #'hero-wrapper)
 
 (deftest def-wrapper-composite-test ()
   (let ((html (node-from-test-html "composite-test.html")))
