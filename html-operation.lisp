@@ -32,7 +32,7 @@
 (defun html-from-uri (uri)
   "Convert the html text to the s-exp representation, where the html
   text comes from an uri."
-  (node-from-string (drakma:http-request uri)))
+  (html-from-string (drakma:http-request uri)))
 
 (defun fragment-from-string (str)
   "Convert the text containing the html fragment to its corresponding
