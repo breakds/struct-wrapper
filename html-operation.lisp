@@ -120,14 +120,27 @@
 
 (declaim (inline analyze-pattern))
 (defun analyze-pattern (pattern)
-  "Split the pattern into two parts: 1. the part before the colon is
+  "Split the pattern into three parts: the part before the colon is
   called the major, and the part after the colon (if colon exists) is
-  called the postfix, which should be an integer."
-  (let ((splitted (split-sequence #\: pattern)))
-    (values (car splitted)
-	    (handler-case 
-		(parse-integer (cadr splitted))
-	      (t nil)))))
+  called the postfix, which should be an integer, possibly with a
+  prefix operator >, <."
+  (let* ((splitted (split-sequence #\: pattern))
+         (major (car splitted))
+         (post-major (cadr splitted))
+         postfix comparator)
+    (when (and post-major
+               (> (length post-major) 0))
+      (case (aref post-major 0)
+        (#\> (setf postfix (subseq post-major 1))
+             (setf comparator #'>))
+        (#\< (setf postfix (subseq post-major 1))
+             (setf comparator #'<))
+        (t (setf postfix post-major)
+           (setf comparator #'=))))
+    (values major comparator 
+            (handler-case 
+		(parse-integer postfix)
+              (t nil)))))
 
 (declaim (inline match-class-pattern))
 (defun match-class-pattern (node pattern)
@@ -151,7 +164,7 @@
   ;; Currently supported patterns are: "tag-name" ".class-name" and
   ;; "[tag-name|.class-name]:n", where n stands for we want the n-th
   ;; match.
-  (multiple-value-bind (major postfix) (analyze-pattern head)
+  (multiple-value-bind (major comparator postfix) (analyze-pattern head)
     (let ((is-class-pattern (eq (aref major 0) #\.))
           (is-id-pattern (eq (aref major 0) #\#)))
       (if (null postfix)
@@ -163,26 +176,21 @@
                    (match-id-pattern node major)))
                 (t (lambda (node)
                      (match-tag-pattern node major))))
-          (cond (is-class-pattern
-                 (let ((counter 0))
+          (let ((counter 0))
+            (cond (is-class-pattern
                    (lambda (node)
-                     (when (< counter postfix)
-                       (when (match-class-pattern node major)
-                         (incf counter))
-                       (= counter postfix)))))
-                (is-id-pattern
-                 (let ((counter 0))
+                     (when (match-class-pattern node major)
+                       (incf counter)
+                       (funcall comparator counter postfix))))
+                  (is-id-pattern
                    (lambda (node)
-                     (when (< counter postfix)
-                       (when (match-id-pattern node major)
-                         (incf counter))
-                       (= counter postfix)))))
-                (t (let ((counter 0))
-                     (lambda (node)
-                       (when (< counter postfix)
-                         (when (match-tag-pattern node major)
-                           (incf counter))
-                         (= counter postfix))))))))))
+                     (when (match-id-pattern node major)
+                       (incf counter)
+                       (funcall comparator counter postfix))))
+                  (t (lambda (node)
+                       (when (match-tag-pattern node major)
+                         (incf counter)
+                         (funcall comparator counter postfix))))))))))
 
 (defun split-selector (selector)
   "split the selector string into two parts (as values) and return

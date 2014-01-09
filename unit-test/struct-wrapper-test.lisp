@@ -77,7 +77,7 @@
                   (make-struct-wrapper
                    ("p b:1" :name #'get-content)
                    ("ul" :army (make-list-wrapper
-                                "li"
+                                "li:>1"
                                 (make-struct-wrapper
                                  (".creature" :class #'get-content)
                                  (".quantity" :num #'get-content-int))))))))
@@ -109,7 +109,7 @@
   (".quantity" :num #'get-content-int))
 
 (def-list-wrapper army-wrapper
-    "li" #'army-unit-wrapper)
+    "li:>1" #'army-unit-wrapper)
 
 (def-struct-wrapper hero-wrapper
   ("p b:1" :name #'get-content)
