@@ -158,15 +158,32 @@
   "Return T if the id of the node matches the pattern."
   (string-equal (subseq pattern 1) (get-id node)))
 
+(declaim (inline match-attribute-exist-pattern))
+(defun match-attribute-exist-pattern (node pattern)
+  "Return T if the id of the node has corresponding attribute"
+  (let ((attribute-name (subseq pattern 1
+                                (1- (length pattern)))))
+    (not (null (assoc attribute-name (get-attributes node)
+                      :test #'equal)))))
+
 (defun make-pattern-matcher (head)
   "Create a lambda that accepts a node. If the node matches the
   provided selector head, the lambda will return T." 
-  ;; Currently supported patterns are: "tag-name" ".class-name" and
-  ;; "[tag-name|.class-name]:n", where n stands for we want the n-th
-  ;; match.
+  ;; Current supported patterns are: 
+  ;; majors:
+  ;; "tag-name"
+  ;; ".class-name"
+  ;; "[attribute-name]"
+  ;; postfix:
+  ;; ":n"
+  ;; ":>n"
+  ;; ":<n"
   (multiple-value-bind (major comparator postfix) (analyze-pattern head)
     (let ((is-class-pattern (eq (aref major 0) #\.))
-          (is-id-pattern (eq (aref major 0) #\#)))
+          (is-id-pattern (eq (aref major 0) #\#))
+          (is-attribute-exist-pattern 
+           (and (eq (aref major 0) #\[)
+                (eq (aref major (1- (length major))) #\]))))
       (if (null postfix)
           (cond (is-class-pattern 
                  (lambda (node)
@@ -174,6 +191,9 @@
                 (is-id-pattern
                  (lambda (node)
                    (match-id-pattern node major)))
+                (is-attribute-exist-pattern
+                 (lambda (node)
+                   (match-attribute-exist-pattern node major)))
                 (t (lambda (node)
                      (match-tag-pattern node major))))
           (let ((counter 0))
@@ -185,6 +205,11 @@
                   (is-id-pattern
                    (lambda (node)
                      (when (match-id-pattern node major)
+                       (incf counter)
+                       (funcall comparator counter postfix))))
+                  (is-attribute-exist-pattern
+                   (lambda (node)
+                     (when (match-attribute-exist-pattern node major)
                        (incf counter)
                        (funcall comparator counter postfix))))
                   (t (lambda (node)
