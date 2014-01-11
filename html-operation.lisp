@@ -142,80 +142,68 @@
 		(parse-integer postfix)
               (t nil)))))
 
-(declaim (inline match-class-pattern))
-(defun match-class-pattern (node pattern)
-  "Return T if the class attribute of the node contains the provided
-  pattern."
+(defparameter *patterns* nil)
+
+(defmacro def-pattern (name (&key (recognizer 't))
+		       &body body)
+  `(progn
+     (declaim (inline ,(symb 'is- name '-pattern)))
+     (defun ,(symb 'is- name '-pattern) (pattern)
+       ,recognizer)
+     (declaim (inline ,(symb 'match- name '-pattern)))
+     (defun ,(symb 'match- name '-pattern) (node pattern)
+       ,@body)
+     ,(if (eq recognizer 't)
+	  `(setf *patterns* (append *patterns* (list ',name)))
+	  `(push ',name *patterns*))))
+
+(def-pattern class
+    (:recognizer (eq (aref pattern 0) #\.))
+    "Return T if the class attribute of the node contains the provided
+    pattern."
   (member (subseq pattern 1) (get-class node) :test #'string-equal))
 
-(declaim (inline match-tag-pattern))
-(defun match-tag-pattern (node pattern)
-  "Return T if the tag of the node contains the provided pattern."
+(def-pattern tag
+    (:recognizer t)
+    "Return T if the tag of the node contains the provided pattern."
   (string-equal pattern (get-tag node)))
 
-(declaim (inline match-id-pattern))
-(defun match-id-pattern (node pattern)
-  "Return T if the id of the node matches the pattern."
+(def-pattern id
+    (:recognizer (eq (aref pattern 0) #\#))
+    "Return T if the id of the node matches the pattern."
   (string-equal (subseq pattern 1) (get-id node)))
 
-(declaim (inline match-attribute-exist-pattern))
-(defun match-attribute-exist-pattern (node pattern)
-  "Return T if the id of the node has corresponding attribute"
+(def-pattern attribute-exist
+    (:recognizer (and (eq (aref pattern 0) #\[)
+		      (eq (aref pattern (1- (length pattern))) #\])))
+    "Return T if the id of the node has corresponding attribute."
   (let ((attribute-name (subseq pattern 1
                                 (1- (length pattern)))))
     (not (null (assoc attribute-name (get-attributes node)
                       :test #'equal)))))
 
-(defun make-pattern-matcher (head)
-  "Create a lambda that accepts a node. If the node matches the
-  provided selector head, the lambda will return T." 
-  ;; Current supported patterns are: 
-  ;; majors:
-  ;; "tag-name"
-  ;; ".class-name"
-  ;; "[attribute-name]"
-  ;; postfix:
-  ;; ":n"
-  ;; ":>n"
-  ;; ":<n"
-  (multiple-value-bind (major comparator postfix) (analyze-pattern head)
-    (let ((is-class-pattern (eq (aref major 0) #\.))
-          (is-id-pattern (eq (aref major 0) #\#))
-          (is-attribute-exist-pattern 
-           (and (eq (aref major 0) #\[)
-                (eq (aref major (1- (length major))) #\]))))
-      (if (null postfix)
-          (cond (is-class-pattern 
-                 (lambda (node)
-                   (match-class-pattern node major)))
-                (is-id-pattern
-                 (lambda (node)
-                   (match-id-pattern node major)))
-                (is-attribute-exist-pattern
-                 (lambda (node)
-                   (match-attribute-exist-pattern node major)))
-                (t (lambda (node)
-                     (match-tag-pattern node major))))
-          (let ((counter 0))
-            (cond (is-class-pattern
-                   (lambda (node)
-                     (when (match-class-pattern node major)
-                       (incf counter)
-                       (funcall comparator counter postfix))))
-                  (is-id-pattern
-                   (lambda (node)
-                     (when (match-id-pattern node major)
-                       (incf counter)
-                       (funcall comparator counter postfix))))
-                  (is-attribute-exist-pattern
-                   (lambda (node)
-                     (when (match-attribute-exist-pattern node major)
-                       (incf counter)
-                       (funcall comparator counter postfix))))
-                  (t (lambda (node)
-                       (when (match-tag-pattern node major)
-                         (incf counter)
-                         (funcall comparator counter postfix))))))))))
+(defmacro install-pattern-matchers ()
+  `(defun make-pattern-matcher (head)
+     (multiple-value-bind (major comparator postfix) (analyze-pattern head)
+       (if (null postfix)
+	   (cond ,@(loop for pattern-name in *patterns*
+		      collect `((,(symb 'is- pattern-name '-pattern)
+				  major)
+				(lambda (node)
+				  (,(symb 'match- pattern-name '-pattern)
+				    node major)))))
+	   (let ((counter 0))
+	     (cond ,@(loop for pattern-name in *patterns*
+			collect `((,(symb 'is- pattern-name '-pattern)
+				    major)
+				  (lambda (node)
+				    (when (,(symb 'match- pattern-name
+						  '-pattern)
+					    node major)
+				      (incf counter)
+				      (funcall comparator counter postfix)))))))))))
+
+(install-pattern-matchers)
 
 (defun split-selector (selector)
   "split the selector string into two parts (as values) and return
