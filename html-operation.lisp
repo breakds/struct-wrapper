@@ -125,22 +125,27 @@
   called the postfix, which should be an integer, possibly with a
   prefix operator >, <."
   (let* ((splitted (split-sequence #\: pattern))
-         (major (car splitted))
-         (post-major (cadr splitted))
-         postfix comparator)
+	 (major (car splitted))
+	 (post-major (cadr splitted))
+	 (inverse #'identity)
+	 postfix comparator)
+    (when (and (> (length major) 5)
+	       (string-equal (subseq pattern 0 4) "not("))
+      (setf inverse #'not)
+      (setf major (subseq major 4 (1- (length major)))))
     (when (and post-major
-               (> (length post-major) 0))
+	       (> (length post-major) 0))
       (case (aref post-major 0)
-        (#\> (setf postfix (subseq post-major 1))
-             (setf comparator #'>))
-        (#\< (setf postfix (subseq post-major 1))
-             (setf comparator #'<))
-        (t (setf postfix post-major)
-           (setf comparator #'=))))
-    (values major comparator 
-            (handler-case 
+	(#\> (setf postfix (subseq post-major 1))
+	     (setf comparator #'>))
+	(#\< (setf postfix (subseq post-major 1))
+	     (setf comparator #'<))
+	(t (setf postfix post-major)
+	   (setf comparator #'=))))
+    (values major inverse comparator 
+	    (handler-case 
 		(parse-integer postfix)
-              (t nil)))))
+	      (t nil)))))
 
 (defparameter *patterns* nil)
 
@@ -160,23 +165,26 @@
 (def-pattern class
     (:recognizer (eq (aref pattern 0) #\.))
     "Return T if the class attribute of the node contains the provided
-    pattern."
+    pattern. Example: .class-name"
   (member (subseq pattern 1) (get-class node) :test #'string-equal))
 
 (def-pattern tag
     (:recognizer t)
-    "Return T if the tag of the node contains the provided pattern."
+    "Return T if the tag of the node contains the provided
+    pattern. Example: tag-name"
   (string-equal pattern (get-tag node)))
 
 (def-pattern id
     (:recognizer (eq (aref pattern 0) #\#))
-    "Return T if the id of the node matches the pattern."
+    "Return T if the id of the node matches the pattern. Example:
+    #id-name"
   (string-equal (subseq pattern 1) (get-id node)))
 
 (def-pattern attribute-exist
     (:recognizer (and (eq (aref pattern 0) #\[)
 		      (eq (aref pattern (1- (length pattern))) #\])))
-    "Return T if the id of the node has corresponding attribute."
+    "Return T if the id of the node has corresponding
+    attribute. Example: [attribute-name]"
   (let ((attribute-name (subseq pattern 1
                                 (1- (length pattern)))))
     (not (null (assoc attribute-name (get-attributes node)
@@ -184,22 +192,27 @@
 
 (defmacro install-pattern-matchers ()
   `(defun make-pattern-matcher (head)
-     (multiple-value-bind (major comparator postfix) (analyze-pattern head)
+     (multiple-value-bind (major inverse comparator postfix) 
+	 (analyze-pattern head)
        (if (null postfix)
 	   (cond ,@(loop for pattern-name in *patterns*
 		      collect `((,(symb 'is- pattern-name '-pattern)
 				  major)
 				(lambda (node)
-				  (,(symb 'match- pattern-name '-pattern)
-				    node major)))))
+				  (funcall inverse 
+					   (,(symb 'match- 
+						   pattern-name 
+						   '-pattern)
+					     node major))))))
 	   (let ((counter 0))
 	     (cond ,@(loop for pattern-name in *patterns*
 			collect `((,(symb 'is- pattern-name '-pattern)
 				    major)
 				  (lambda (node)
-				    (when (,(symb 'match- pattern-name
-						  '-pattern)
-					    node major)
+				    (when (funcall inverse 
+						   (,(symb 'match- pattern-name
+							   '-pattern)
+						     node major))
 				      (incf counter)
 				      (funcall comparator counter postfix)))))))))))
 

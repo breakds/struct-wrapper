@@ -95,6 +95,15 @@
     (is (not (null (funcall matcher node))))
     (is (null (funcall matcher node))))
 
+  (let ((matcher (make-pattern-matcher "not(h1):<3"))
+        (node (fragment-from-string
+               "<a href=\"uri\" id=\"fun\">link</a>")))
+    (is (not (null (funcall matcher node))))
+    (is (not (null (funcall matcher node))))
+    (is (null (funcall matcher node)))
+    (is (null (funcall matcher node))))
+
+
   (let ((matcher (make-pattern-matcher ".fun:>1"))
         (node (fragment-from-string
                "<a href=\"uri\" class=\"fun\">link</a>")))
