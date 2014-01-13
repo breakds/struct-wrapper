@@ -29,6 +29,12 @@
   (html5-parser:node-to-xmls
    (html5-parser:parse-html5 str)))
 
+(defun html-from-file (path)
+  "Convert the html text to the s-exp representation, where the html
+  text comes from a file."
+  (html5-parser:node-to-xmls
+   (html5-parser:parse-html5 (pathname path))))
+
 (defun html-from-uri (uri)
   "Convert the html text to the s-exp representation, where the html
   text comes from an uri."
@@ -147,7 +153,8 @@
 		(parse-integer postfix)
 	      (t nil)))))
 
-(defparameter *patterns* nil)
+(eval-when (load)
+  (defparameter *patterns* nil))
 
 (defmacro def-pattern (name (&key (recognizer 't))
 		       &body body)
@@ -164,26 +171,37 @@
 
 (def-pattern class
     (:recognizer (eq (aref pattern 0) #\.))
-    "Return T if the class attribute of the node contains the provided
+  "Return T if the class attribute of the node contains the provided
     pattern. Example: .class-name"
   (member (subseq pattern 1) (get-class node) :test #'string-equal))
 
 (def-pattern tag
     (:recognizer t)
-    "Return T if the tag of the node contains the provided
-    pattern. Example: tag-name"
-  (string-equal pattern (get-tag node)))
+  "Return T if the tag of the node contains the provided pattern,
+    possibly with attribute postfix. Example: tag-name[~attribute]."
+  (let ((pos (position #\[ pattern)))
+    (if pos
+	(let ((tag (subseq pattern 0 pos))
+	      (attribute (subseq pattern (1+ pos)))
+	      (inverse #'identity))
+	  (when (eq (aref attribute 0) #\~)
+	    (setf inverse #'not)
+	    (setf attribute (subseq attribute 1)))
+	  (and (string-equal tag (get-tag node))
+	       (funcall inverse (assoc attribute (get-attributes node)
+				       :test #'equal))))
+	(string-equal pattern (get-tag node)))))
 
 (def-pattern id
     (:recognizer (eq (aref pattern 0) #\#))
-    "Return T if the id of the node matches the pattern. Example:
+  "Return T if the id of the node matches the pattern. Example:
     #id-name"
   (string-equal (subseq pattern 1) (get-id node)))
 
 (def-pattern attribute-exist
     (:recognizer (and (eq (aref pattern 0) #\[)
 		      (eq (aref pattern (1- (length pattern))) #\])))
-    "Return T if the id of the node has corresponding
+  "Return T if the id of the node has corresponding
     attribute. Example: [attribute-name]"
   (let ((attribute-name (subseq pattern 1
                                 (1- (length pattern)))))

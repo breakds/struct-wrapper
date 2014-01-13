@@ -121,6 +121,16 @@
                "<p class=\"fun\">link</p>")))
     (is (null (funcall matcher node))))
 
+  (let ((matcher (make-pattern-matcher "p[href]"))
+        (node (fragment-from-string
+               "<p class=\"fun\">link</p>")))
+    (is (null (funcall matcher node))))
+
+  (let ((matcher (make-pattern-matcher "p[~href]"))
+        (node (fragment-from-string
+               "<p class=\"fun\">link</p>")))
+    (is (funcall matcher node)))
+
   (let ((matcher (make-pattern-matcher ".not-funny"))
         (node (fragment-from-string
                "<a href=\"uri\" class=\"funny tasty\">link</a>")))

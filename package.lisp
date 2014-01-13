@@ -6,6 +6,7 @@
 	#:swiss-knife
 	#:split-sequence)
   (:export #:html-from-uri
+	   #:html-from-file
 	   #:html-from-string
 	   #:fragment-from-string
 	   ;; node accessors
