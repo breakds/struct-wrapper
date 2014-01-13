@@ -182,7 +182,8 @@
   (let ((pos (position #\[ pattern)))
     (if pos
 	(let ((tag (subseq pattern 0 pos))
-	      (attribute (subseq pattern (1+ pos)))
+	      (attribute (subseq pattern (1+ pos)
+				 (1- (length pattern))))
 	      (inverse #'identity))
 	  (when (eq (aref attribute 0) #\~)
 	    (setf inverse #'not)
