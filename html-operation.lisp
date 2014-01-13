@@ -152,13 +152,12 @@
 	    (handler-case 
 		(parse-integer postfix)
 	      (t nil)))))
-
-(eval-when (load)
+(eval-when (compile)
   (defparameter *patterns* nil))
 
 (defmacro def-pattern (name (&key (recognizer 't))
 		       &body body)
-  `(progn
+  `(eval-when (compile)
      (declaim (inline ,(symb 'is- name '-pattern)))
      (defun ,(symb 'is- name '-pattern) (pattern)
        ,recognizer)
@@ -208,7 +207,6 @@
                                 (1- (length pattern)))))
     (not (null (assoc attribute-name (get-attributes node)
                       :test #'equal)))))
-
 (defmacro install-pattern-matchers ()
   `(defun make-pattern-matcher (head)
      (multiple-value-bind (major inverse comparator postfix) 
