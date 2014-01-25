@@ -33,6 +33,7 @@
 	#:html-operation)
   (:export #:set-equal
            #:struct-equal
+           #:empty-struct-p
            #:match-selector-head
 	   #:def-struct-wrapper
 	   #:make-struct-wrapper

@@ -45,7 +45,12 @@
         (when (and (atom obj-a) (atom obj-b))
           (equal obj-a obj-b)))))
 
-
+(defun empty-struct-p (obj)
+  "Return non nil if the obj is (:obj t)."
+  (and (consp obj)
+       (= 2 (length obj))
+       (handler-case (getf obj :obj)
+         (t () nil))))
 
 ;;; ---------- Aux subroutines for slot descriptors ----------
 
