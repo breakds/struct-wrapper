@@ -5,7 +5,8 @@
 (in-package #:breakds.struct-wrapper-test)
 
 (defun node-from-test-html (uri)
-  (html5-parser:node-to-xmls
+  (html5-parser:transform-html5-dom 
+   :xmls
    (html5-parser:parse-html5 
     (merge-pathnames (format nil "unit-test/~a" uri)
 		     (asdf:system-source-directory 'struct-wrapper)))))

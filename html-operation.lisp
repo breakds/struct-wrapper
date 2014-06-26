@@ -26,13 +26,15 @@
   ;; normalize it. That says, if the string being parsed does not come
   ;; with <thml> <head> etc., it will wrap them in
   ;; <html><body></body></html>.
-  (html5-parser:node-to-xmls
+  (html5-parser:transform-html5-dom 
+   :xmls
    (html5-parser:parse-html5 str)))
 
 (defun html-from-file (path)
   "Convert the html text to the s-exp representation, where the html
   text comes from a file."
-  (html5-parser:node-to-xmls
+  (html5-parser:transform-html5-dom 
+   :xmls
    (html5-parser:parse-html5 (pathname path))))
 
 (defun html-from-uri (uri)
@@ -43,7 +45,8 @@
 (defun fragment-from-string (str)
   "Convert the text containing the html fragment to its corresponding
   s-exp representation."
-  (car (html5-parser:node-to-xmls
+  (car (html5-parser:transform-html5-dom 
+	:xmls
 	(html5-parser:parse-html5-fragment str))))
 
 (defun is-trivial (node)
@@ -65,47 +68,47 @@
 
 (declaim (inline get-tag))
 (def-node-accessor tag 
-  (car node))
+    (car node))
 
 (declaim (inline get-attributes))
 (def-node-accessor attributes
-  (cadr node))
+    (cadr node))
 
 (declaim (inline get-class))
 (def-node-accessor class
-  (let ((result (split-sequence #\space 
-				(cadr (assoc "class" 
-					     (get-attributes node)
-					     :test #'string-equal)))))
-    (when (car result)
-      result)))
+    (let ((result (split-sequence #\space 
+				  (cadr (assoc "class" 
+					       (get-attributes node)
+					       :test #'string-equal)))))
+      (when (car result)
+	result)))
 
 (declaim (inline get-id))
 (def-node-accessor id
-  (let ((result (cadr (assoc "id"
-                             (get-attributes node)
-                             :test #'string-equal))))
-    (when result
-      result)))
+    (let ((result (cadr (assoc "id"
+			       (get-attributes node)
+			       :test #'string-equal))))
+      (when result
+	result)))
 
 
 (declaim (inline get-children))
 (def-node-accessor children
-  (cddr node))
+    (cddr node))
 
 (declaim (inline get-content))
 (def-node-accessor content
-  (let ((holder (caddr node)))
-    (if (is-trivial holder)
-	holder
-	"not-plain-text")))
+    (let ((holder (caddr node)))
+      (if (is-trivial holder)
+	  holder
+	  "not-plain-text")))
 
 (declaim (inline get-content-int))
 (def-node-accessor content-int
-  (let ((content (get-content node)))
-    (when (stringp content)
-      (handler-case (parse-integer content)
-        (t () nil)))))
+    (let ((content (get-content node)))
+      (when (stringp content)
+	(handler-case (parse-integer content)
+	  (t () nil)))))
 
 
 
