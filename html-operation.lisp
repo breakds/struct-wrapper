@@ -74,6 +74,11 @@
 (def-node-accessor attributes
     (cadr node))
 
+(declaim (inline get-attribute))
+(defun get-attribute (node attribute-name)
+  (second (assoc attribute-name (get-attributes node)
+                 :test #'string-equal)))
+
 (declaim (inline get-class))
 (def-node-accessor class
     (let ((result (split-sequence #\space 

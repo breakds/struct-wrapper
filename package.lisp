@@ -13,6 +13,7 @@
 	   #:is-trivial
 	   #:get-tag
 	   #:get-attributes
+           #:get-attribute
 	   #:get-class
            #:get-id
 	   #:get-children
