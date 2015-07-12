@@ -37,10 +37,10 @@
    :xmls
    (html5-parser:parse-html5 (pathname path))))
 
-(defun html-from-uri (uri)
+(defun html-from-uri (uri &key (encoding :utf-8))
   "Convert the html text to the s-exp representation, where the html
   text comes from an uri."
-  (html-from-string (drakma:http-request uri)))
+  (html-from-string (drakma:http-request uri :external-format-in :utf-8)))
 
 (defun fragment-from-string (str)
   "Convert the text containing the html fragment to its corresponding
