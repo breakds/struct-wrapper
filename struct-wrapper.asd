@@ -23,5 +23,7 @@
                                 :depends-on ("selector"))
                          (:file "wrapper")
                          (:file "wrapper-test"
-                                :depends-on ("wrapper")))))
+                                :depends-on ("wrapper"))
+                         (:file "struct-wrapper"
+                                :depends-on ("dom" "selector" "wrapper")))))
   :description "Wrapper builder for web scraping.")
