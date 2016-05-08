@@ -15,11 +15,11 @@
 (in-package :struct-wrapper.wrapper)
 
 (defmacro with-first-match ((node-var &key (from nil) (matches nil)) &body body)
-  `(call-on-first-match ,from ,matches
+  `(call-on-first-match ,from ',matches
                         (lambda (,node-var)
                           ,@body)))
 
 (defmacro map-matches ((node-var &key (from nil) (matches nil)) &body body)
-  `(call-on-all-matches ,from ,matches
+  `(call-on-all-matches ,from ',matches
                         (lambda (,node-var)
                           ,@body)))

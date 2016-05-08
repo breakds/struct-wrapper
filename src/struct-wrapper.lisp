@@ -25,5 +25,16 @@
            #:dom-classes
            
            #:with-first-match
-           #:map-matches))
+           #:map-matches
+
+           #:run-all-tests))
 (in-package :struct-wrapper)
+
+(defun run-all-tests ()
+  (format t "~a~%" (with-failure-debugging ()
+                     (run-tests :package :struct-wrapper.dom)))
+  (format t "~a~%" (with-failure-debugging ()
+                     (run-tests :package :struct-wrapper.selector)))
+  (format t "~a~%" (with-failure-debugging ()
+                     (run-tests :package :struct-wrapper.wrapper))))
+

@@ -14,7 +14,7 @@
                           ("li" (("class" "class2")) "content3")
                           ("li" (("class" "class2")) "content4"))))))
     (with-first-match (x :from node
-                         :matches '("tr" "td" "ul" (:and "li" ".class2")))
+                         :matches ("tr" "td" "ul" (:and "li" ".class2")))
       (assert-equal "content2" (first (dom-children x))))))
 
 (define-test map-matches-test ()
@@ -27,7 +27,7 @@
                           ("li" (("class" "class2")) "content4"))))))
     (assert-equal '("content2" "content3" "content4")
                   (map-matches (x :from node
-                                  :matches '("tr" "td" "ul" (:and "li" ".class2")))
+                                  :matches ("tr" "td" "ul" (:and "li" ".class2")))
                     (first (dom-children x))))))
                     
       
