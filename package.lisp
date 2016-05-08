@@ -3,8 +3,9 @@
 (defpackage #:breakds.html-operation
   (:nicknames #:html-operation)
   (:use #:cl
-	#:swiss-knife
 	#:split-sequence)
+  (:import-from #:alexandria
+                #:symbolicate)
   (:export #:html-from-uri
 	   #:html-from-file
 	   #:html-from-string
@@ -30,8 +31,10 @@
   (:nicknames #:struct-wrapper)
   (:use #:cl
         #:ppcre
-        #:swiss-knife
 	#:html-operation)
+  (:import-from #:alexandria
+                #:symbolicate
+                #:with-gensyms)
   (:export #:set-equal
            #:struct-equal
            #:empty-struct-p

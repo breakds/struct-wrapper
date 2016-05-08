@@ -62,7 +62,7 @@
   trivial."
   ;; This anaphoric macro force the parameter to be node. This is fine
   ;; since the macro will only be used internally in this package.
-  `(defun ,(symb 'get- property-name) (node)
+  `(defun ,(symbolicate 'get- property-name) (node)
      (unless (is-trivial node)
        ,@body)))
 
@@ -166,11 +166,11 @@
 (defmacro def-pattern (name (&key (recognizer 't))
 		       &body body)
   `(eval-when (compile)
-     (declaim (inline ,(symb 'is- name '-pattern)))
-     (defun ,(symb 'is- name '-pattern) (pattern)
+     (declaim (inline ,(symbolicate 'is- name '-pattern)))
+     (defun ,(symbolicate 'is- name '-pattern) (pattern)
        ,recognizer)
-     (declaim (inline ,(symb 'match- name '-pattern)))
-     (defun ,(symb 'match- name '-pattern) (node pattern)
+     (declaim (inline ,(symbolicate 'match- name '-pattern)))
+     (defun ,(symbolicate 'match- name '-pattern) (node pattern)
        ,@body)
      ,(if (eq recognizer 't)
 	  `(setf *patterns* (append *patterns* (list ',name)))
@@ -221,21 +221,21 @@
 	 (analyze-pattern head)
        (if (null postfix)
 	   (cond ,@(loop for pattern-name in *patterns*
-		      collect `((,(symb 'is- pattern-name '-pattern)
+		      collect `((,(symbolicate 'is- pattern-name '-pattern)
 				  major)
 				(lambda (node)
 				  (funcall inverse 
-					   (,(symb 'match- 
+					   (,(symbolicate 'match- 
 						   pattern-name 
 						   '-pattern)
 					     node major))))))
 	   (let ((counter 0))
 	     (cond ,@(loop for pattern-name in *patterns*
-			collect `((,(symb 'is- pattern-name '-pattern)
+			collect `((,(symbolicate 'is- pattern-name '-pattern)
 				    major)
 				  (lambda (node)
 				    (when (funcall inverse 
-						   (,(symb 'match- pattern-name
+						   (,(symbolicate 'match- pattern-name
 							   '-pattern)
 						     node major))
 				      (incf counter)

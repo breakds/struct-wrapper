@@ -80,7 +80,7 @@
                `((let ,(loop 
                           for head being the hash-keys of clusters
                           for id from 0
-                          collect `(,(symb matcher "-" id) 
+                          collect `(,(symbolicate matcher "-" id) 
                                      (make-pattern-matcher ,head)))
                    (loop for ,child in (get-children ,node)
                       do ,@(loop 
@@ -88,7 +88,7 @@
                               the hash-values of clusters
                               for id from 0
                               collect `(when (funcall 
-                                              ,(symb matcher "-" id)
+                                              ,(symbolicate matcher "-" id)
                                               ,child)
                                          ,@(build-wrapper-body
                                             sub-descriptors

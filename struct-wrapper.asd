@@ -7,9 +7,9 @@
                  #:cl-ppcre
 		 #:split-sequence
 		 #:stefil
-                 #:basicl)
+                 #:alexandria)
     :components ((:file "package")
 		 (:file "html-operation")
-                 (:file "struct-wrapper")
-		 (:file "unit-test/html-operation-test")
-		 (:file "unit-test/struct-wrapper-test")))
+                 (:file "struct-wrapper")))
+		 ;; (:file "unit-test/html-operation-test")
+		 ;; (:file "unit-test/struct-wrapper-test")))
