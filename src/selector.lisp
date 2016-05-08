@@ -41,30 +41,32 @@
                (keywordp (car selector)))
       (let ((operator (first selector))
             (operands (rest selector)))
-        (case (car selector)
-          (:id (match-selector (dom-attribute element "id")
-                               (first operands)))
-          (:class (match-selector (dom-classes element)
+        (unless (and (member operator '(:id :class :tag :children))
+                     (not (listp element)))
+          (case (car selector)
+            (:id (match-selector (dom-attribute element "id")
+                                 (first operands)))
+            (:class (match-selector (dom-classes element)
+                                    (first operands)))
+            (:tag (match-selector (dom-tag element)
                                   (first operands)))
-          (:tag (match-selector (dom-tag element)
-                                (first operands)))
-          (:children (match-selector (dom-children element)
-                                     (first operands)))
-          (:= (if (integerp (first operands))
-                  (= element (first operands))
-                  (string= element (first operands))))
-          (:always (loop for sub-element in element
-                      always (match-selector sub-element (first operands))))
-          (:thereis (loop for sub-element in element
-                       thereis (match-selector sub-element (first operands))))
-          (:has (member (first operands) element
-                        :test #'string=))
-          (:t t)
-          (:and (loop for operand in operands
-                   always (match-selector element operand)))
-          (:or (loop for operand in operands
-                  thereis (match-selector element operand)))
-          (:not (not (match-selector element (first operands)))))))))
+            (:children (match-selector (dom-children element)
+                                       (first operands)))
+            (:= (if (integerp (first operands))
+                    (= element (first operands))
+                    (string= element (first operands))))
+            (:always (loop for sub-element in element
+                        always (match-selector sub-element (first operands))))
+            (:thereis (loop for sub-element in element
+                         thereis (match-selector sub-element (first operands))))
+            (:has (member (first operands) element
+                          :test #'string=))
+            (:t t)
+            (:and (loop for operand in operands
+                     always (match-selector element operand)))
+            (:or (loop for operand in operands
+                    thereis (match-selector element operand)))
+            (:not (not (match-selector element (first operands))))))))))
 
 (defun call-on-first-match (node selectors func)
   (if (null selectors)
